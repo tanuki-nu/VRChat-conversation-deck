@@ -1,1 +1,4 @@
-
+<paragraph>
+~てすと~
+^test^<vector:1.00>
+<appropriate-behavior>
