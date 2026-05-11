@@ -106,20 +106,16 @@
       bottom: 0;
       width: 80px;
       height: 5px;
-      background: #CCCCFF; /* 薄青紫 (hexに数字を含まない) */
+      background: #CCCCFF;
       border-radius: 99px;
-    }
-
-    .paragraph-block {
-      margin-bottom: 2rem;
     }
 
     .related-questions {
       margin: 2rem 0;
       padding: 1.2rem 1.5rem;
-      background: rgba(204, 204, 255, 0.2); /* #CCCCFFベースの背景 */
+      background: rgba(204, 204, 255, 0.2);
       border-radius: 12px;
-      border-left: 6px solid #CCCCFF; /* 薄青紫 (hexに数字を含まない) */
+      border-left: 6px solid #CCCCFF;
     }
 
     .related-questions-title {
@@ -146,7 +142,6 @@
       color: #333388;
     }
 
-    /* ^^ 記号を非表示にする設定 */
     .vector-anchor {
       display: none;
     }
@@ -189,7 +184,6 @@
     const text_file = "text_context_template.txt";
     document.getElementById("file-name").textContent = text_file;
 
-    // ベクトル付きアンカー情報
     const vectorAnchors = [];
 
     function parseVector(str) {
@@ -222,9 +216,10 @@
         let processed = line.trim();
         if (!processed) return;
 
-        // 1) ~~ に挟まれた文字をタイトルとして扱う
-        if (processed.startsWith("~~") && processed.endsWith("~~")) {
-          const title = processed.replace(/~~/g, "").trim();
+        // 1) タイトルの判定: ~タイトル~ または ~~タイトル~~
+        // 行全体が ~ または ~~ で囲まれている場合
+        if (/^~+[^~]+~+$/.test(processed)) {
+          const title = processed.replace(/~+/g, "").trim();
           sectionCount++;
           const id = `section-${sectionCount}`;
           
@@ -241,20 +236,26 @@
           return;
         }
 
-        // 2) ^^<vector:○.○○>^^ をアンカーとして扱う（非表示）
-        processed = line.replace(/\^\^([^^]+)\^\^/g, (match, inside) => {
-          const vector = parseVector(inside);
-          const id = `vec-${vectorAnchors.length + 1}`;
-          vectorAnchors.push({
-            id,
-            vector,
-            raw: inside,
-            indexInText: lineIndex
-          });
-          return `<span class="vector-anchor" id="${id}" data-vector="${vector ?? ""}"></span>`;
+        // 2) アンカーの判定: ^...^ または ^^...^^
+        // 制御記号を検出しつつ、表示用テキストからは削除する
+        processed = line.replace(/\^+(.*?)\^+/g, (match, inside) => {
+          // もし vector タグが含まれていれば、それをパースしてアンカーにする
+          if (inside.includes("<vector:")) {
+            const vector = parseVector(inside);
+            const id = `vec-${vectorAnchors.length + 1}`;
+            vectorAnchors.push({
+              id,
+              vector,
+              raw: inside,
+              indexInText: lineIndex
+            });
+            return `<span class="vector-anchor" id="${id}" data-vector="${vector ?? ""}"></span>`;
+          }
+          // vector タグがない場合は、単に記号を消す（表示しない）
+          return "";
         });
 
-        // 3) <appropriate-behavior> を「関連質問」ブロックに変換
+        // 3) <appropriate-behavior> の処理
         if (processed.includes("<appropriate-behavior>")) {
           const lastAnchor = [...vectorAnchors].reverse().find(a => a.indexInText <= lineIndex);
           const baseId = lastAnchor ? lastAnchor.id : null;
@@ -276,11 +277,13 @@
           processed = processed.replace("<appropriate-behavior>", block);
         }
 
-        // 4) <paragraph> タグは単純に削除（~~をタイトルとするため）
-        processed = processed.replace("<paragraph>", "");
+        // 4) 不要なタグのクリーンアップ
+        processed = processed.replace("<paragraph>", "").trim();
+        // まだ残っている <vector:...> タグを削除
+        processed = processed.replace(/<vector:.*?>/g, "");
 
         // 残ったテキストを段落として追加
-        if (processed.trim().length > 0) {
+        if (processed.length > 0) {
           htmlParts.push(`<p>${processed}</p>`);
         }
       });
@@ -291,7 +294,7 @@
         contentEl.innerHTML = htmlParts.join("\n");
       }
 
-      // 「関連質問」クリックで該当アンカーへスクロール
+      // 関連質問のクリックイベント
       contentEl.querySelectorAll(".related-questions li[data-target]").forEach(li => {
         li.addEventListener("click", () => {
           const targetId = li.getAttribute("data-target");
@@ -303,7 +306,6 @@
       });
     }
 
-    // txtファイルを読み込んでレンダリング
     fetch(text_file)
       .then(res => {
         if (!res.ok) throw new Error("テキストファイルを読み込めませんでした");
