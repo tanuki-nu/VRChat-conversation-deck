@@ -8,53 +8,95 @@
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       line-height: 1.7;
       margin: 0;
-      padding: 0 1.5rem 3rem;
-      background: #fafafa;
+      padding: 2rem;
+      background-image: url('https://drive.google.com/thumbnail?id=1lib1hz_wcIWRTFGsT61Ipkj9xR-beQ4s&sz=w1920');
+      background-size: cover;
+      background-attachment: fixed;
+      background-position: center;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    .main-container {
+      background: rgba(255, 255, 255, 0.4);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 24px;
+      padding: 3rem;
+      max-width: 1000px;
+      width: 100%;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+      border: none;
     }
 
     header {
-      padding: 1rem 0 0.5rem;
-      border-bottom: 1px solid #ddd;
-      margin-bottom: 1rem;
+      text-align: center;
+      margin-bottom: 3rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    header h1 {
+      margin: 0 0 0.75rem;
+      font-size: 2.2rem;
+      color: #222;
+    }
+
+    .muted-meta {
+      color: #555;
+      font-size: 0.95rem;
     }
 
     #toc {
-      margin: 1rem 0 2rem;
-      padding: 1rem;
-      background: #fff;
-      border-radius: 8px;
-      border: 1px solid #e0e0e0;
+      margin-bottom: 3rem;
+      padding: 1.5rem 2rem;
+      background: rgba(255, 255, 255, 0.25);
+      border-radius: 16px;
     }
 
     #toc h2 {
       margin-top: 0;
-      font-size: 1rem;
-      color: #555;
+      font-size: 1.2rem;
+      color: #333;
+      border-bottom: 2px solid #CCCCFF;
+      display: inline-block;
+      padding-bottom: 0.2rem;
+      margin-bottom: 1rem;
     }
 
     #toc ul {
-      margin: 0.5rem 0 0;
-      padding-left: 1.2rem;
+      margin: 0;
+      padding-left: 1.5rem;
+      list-style-type: circle;
     }
 
     #toc li {
-      margin: 0.2rem 0;
-      font-size: 0.9rem;
+      margin: 0.4rem 0;
+    }
+
+    #toc a {
+      color: #3366CC;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    #toc a:hover {
+      text-decoration: underline;
     }
 
     #content {
-      background: #fff;
-      border-radius: 8px;
-      border: 1px solid #e0e0e0;
-      padding: 1.5rem;
+      color: #222;
+      font-size: 1.05rem;
     }
 
     .section-heading {
       font-weight: bold;
-      font-size: 1.2rem;
-      margin: 2rem 0 0.5rem;
+      font-size: 1.6rem;
+      margin: 3.5rem 0 1.5rem;
       position: relative;
-      padding-bottom: 0.3rem;
+      padding-bottom: 0.6rem;
+      color: #111;
     }
 
     .section-heading::after {
@@ -62,107 +104,99 @@
       position: absolute;
       left: 0;
       bottom: 0;
-      width: 100%;
-      height: 3px;
-      background: linear-gradient(90deg, #1976d2, #42a5f5);
-      border-radius: 999px;
+      width: 80px;
+      height: 5px;
+      background: #CCCCFF; /* 薄青紫 (hexに数字を含まない) */
+      border-radius: 99px;
     }
 
     .paragraph-block {
-      margin: 1.5rem 0;
-    }
-
-    .paragraph-title {
-      font-weight: 600;
-      margin-bottom: 0.3rem;
+      margin-bottom: 2rem;
     }
 
     .related-questions {
-      margin: 1rem 0 1.5rem;
-      padding: 0.75rem 1rem;
-      background: #f5f7fb;
-      border-radius: 6px;
-      border-left: 4px solid #1976d2;
-      font-size: 0.9rem;
+      margin: 2rem 0;
+      padding: 1.2rem 1.5rem;
+      background: rgba(204, 204, 255, 0.2); /* #CCCCFFベースの背景 */
+      border-radius: 12px;
+      border-left: 6px solid #CCCCFF; /* 薄青紫 (hexに数字を含まない) */
     }
 
     .related-questions-title {
-      font-weight: 600;
-      margin-bottom: 0.4rem;
-      color: #333;
+      font-weight: bold;
+      margin-bottom: 0.6rem;
+      color: #444;
+      font-size: 1rem;
     }
 
     .related-questions ul {
       margin: 0;
-      padding-left: 1.2rem;
+      padding-left: 1.5rem;
     }
 
     .related-questions li {
-      margin: 0.2rem 0;
+      margin: 0.4rem 0;
       cursor: pointer;
-      color: #1976d2;
+      color: #5555AA;
       text-decoration: underline;
+      transition: color 0.2s;
     }
 
+    .related-questions li:hover {
+      color: #333388;
+    }
+
+    /* ^^ 記号を非表示にする設定 */
     .vector-anchor {
-      font-weight: bold;
-      color: #1976d2;
-      cursor: pointer;
-      padding: 0 0.1rem;
+      display: none;
     }
 
-    .vector-anchor::after {
-      content: "^^";
-    }
-
-    .muted-meta {
-      color: #999;
-      font-size: 0.8rem;
+    p {
+      margin: 1.2rem 0;
     }
 
     pre.raw-text {
       white-space: pre-wrap;
       word-break: break-word;
       font-family: inherit;
+      background: rgba(255, 255, 255, 0.2);
+      padding: 1rem;
+      border-radius: 8px;
     }
   </style>
 </head>
 <body>
-  <!-- Python風の前提定義：読み込むテキストファイル名だけを指定 -->
-  <script>
-    const text_file = "text_context_template.txt"; // 例: 同じディレクトリにあるpage.txtを読み込む
-  </script>
+  <div class="main-container">
+    <header>
+      <h1>テキスト駆動ページ</h1>
+      <div class="muted-meta">
+        このページは <code>text_file = "<span id="file-name">text_context_template.txt</span>"</code> を前提として、
+        txtファイルの記号パターンからHTMLを自動生成します。
+      </div>
+    </header>
 
-  <header>
-    <h1>テキスト駆動ページ</h1>
-    <div class="muted-meta">
-      このページは <code>text_file = "<span id="file-name"></span>"</code> を前提として、
-      txtファイルの記号パターンからHTMLを自動生成します。
-    </div>
-  </header>
+    <section id="toc">
+      <h2>目次</h2>
+      <ul id="toc-list"></ul>
+    </section>
 
-  <section id="toc">
-    <h2>段落一覧（&lt;paragraph&gt; から自動生成）</h2>
-    <ul id="toc-list"></ul>
-  </section>
-
-  <main id="content">
-    読み込み中…
-  </main>
+    <main id="content">
+      読み込み中…
+    </main>
+  </div>
 
   <script>
+    const text_file = "text_context_template.txt";
     document.getElementById("file-name").textContent = text_file;
 
     // ベクトル付きアンカー情報
-    const vectorAnchors = []; // { id, vector, raw, indexInText }
+    const vectorAnchors = [];
 
-    // 簡易的なベクトルパース（"0.12" のような数値を想定）
     function parseVector(str) {
       const m = str.match(/<vector:\s*([0-9.]+)\s*>/i);
       return m ? parseFloat(m[1]) : null;
     }
 
-    // 疑似的な「近い質問」判定（ここでは単純に数値差が近い順）
     function findSimilarAnchors(baseId, baseVector, limit = 5) {
       if (baseVector == null) return [];
       const others = vectorAnchors.filter(a => a.id !== baseId && a.vector != null);
@@ -170,7 +204,6 @@
       return others.slice(0, limit);
     }
 
-    // テキストをHTMLに変換するメイン処理
     function renderFromText(rawText) {
       const contentEl = document.getElementById("content");
       const tocListEl = document.getElementById("toc-list");
@@ -178,38 +211,23 @@
       tocListEl.innerHTML = "";
       vectorAnchors.length = 0;
 
-      // -start- と -end- の間は「設計の説明」として無視してもよいが、
-      // ここではそのまま本文に含めないように削除する
+      // -start- と -end- の間を削除
       rawText = rawText.replace(/-start-[\s\S]*?-end-/g, "").trim();
 
-      // 行単位で処理しつつ、記号を差し替える
       const lines = rawText.split(/\r?\n/);
       let htmlParts = [];
-      let paragraphCount = 0;
       let sectionCount = 0;
-      let currentParagraphId = null;
 
       lines.forEach((line, lineIndex) => {
-        let processed = line;
+        let processed = line.trim();
+        if (!processed) return;
 
-        // 1) ~~ に挟まれた文字を大きな段落見出しに
-        //    例: ~~セクションタイトル~~
-        processed = processed.replace(/~~([^~]+)~~/g, (match, title) => {
+        // 1) ~~ に挟まれた文字をタイトルとして扱う
+        if (processed.startsWith("~~") && processed.endsWith("~~")) {
+          const title = processed.replace(/~~/g, "").trim();
           sectionCount++;
           const id = `section-${sectionCount}`;
-          htmlParts.push(
-            `<div class="section-heading" id="${id}">${title}</div>`
-          );
-          return ""; // 行の中からは削除
-        });
-
-        // 2) <paragraph> があると段落ブロックを開始し、TOCに追加
-        if (processed.includes("<paragraph>")) {
-          const title = processed.replace("<paragraph>", "").trim() || `段落 ${paragraphCount + 1}`;
-          paragraphCount++;
-          const id = `paragraph-${paragraphCount}`;
-          currentParagraphId = id;
-
+          
           // TOCに追加
           const li = document.createElement("li");
           const a = document.createElement("a");
@@ -218,17 +236,13 @@
           li.appendChild(a);
           tocListEl.appendChild(li);
 
-          // 本文側
-          htmlParts.push(
-            `<div class="paragraph-block" id="${id}">` +
-              `<div class="paragraph-title">${title}</div>`
-          );
-          processed = ""; // 行からはタイトル部分を削除
+          // 本文側に見出しを追加
+          htmlParts.push(`<div class="section-heading" id="${id}">${title}</div>`);
+          return;
         }
 
-        // 3) ^^<vector:○.○○>^^ をアンカーとして扱う
-        //    HTMLには ^^ の記号だけを表示し、ベクトルはdata属性に保持
-        processed = processed.replace(/\^\^([^^]+)\^\^/g, (match, inside) => {
+        // 2) ^^<vector:○.○○>^^ をアンカーとして扱う（非表示）
+        processed = line.replace(/\^\^([^^]+)\^\^/g, (match, inside) => {
           const vector = parseVector(inside);
           const id = `vec-${vectorAnchors.length + 1}`;
           vectorAnchors.push({
@@ -240,16 +254,15 @@
           return `<span class="vector-anchor" id="${id}" data-vector="${vector ?? ""}"></span>`;
         });
 
-        // 4) <appropriate-behavior> を「関連質問」ブロックに変換
+        // 3) <appropriate-behavior> を「関連質問」ブロックに変換
         if (processed.includes("<appropriate-behavior>")) {
-          // 直前の行に出てきた最後の vectorAnchor を対象とする
           const lastAnchor = [...vectorAnchors].reverse().find(a => a.indexInText <= lineIndex);
           const baseId = lastAnchor ? lastAnchor.id : null;
           const baseVector = lastAnchor ? lastAnchor.vector : null;
           const similars = baseId ? findSimilarAnchors(baseId, baseVector, 5) : [];
 
           let block = `<div class="related-questions" data-base-anchor="${baseId || ""}">`;
-          block += `<div class="related-questions-title">関連する質問（ベクトルが近いもの）</div>`;
+          block += `<div class="related-questions-title">関連する質問</div>`;
           if (similars.length === 0) {
             block += `<div class="muted-meta">関連質問はまだありません。</div>`;
           } else {
@@ -263,24 +276,15 @@
           processed = processed.replace("<appropriate-behavior>", block);
         }
 
+        // 4) <paragraph> タグは単純に削除（~~をタイトルとするため）
+        processed = processed.replace("<paragraph>", "");
+
         // 残ったテキストを段落として追加
         if (processed.trim().length > 0) {
           htmlParts.push(`<p>${processed}</p>`);
         }
-
-        // 段落ブロックの終了（空行で閉じる簡易仕様）
-        if (processed.trim().length === 0 && currentParagraphId) {
-          htmlParts.push(`</div>`);
-          currentParagraphId = null;
-        }
       });
 
-      // 残っている段落ブロックを閉じる
-      if (currentParagraphId) {
-        htmlParts.push(`</div>`);
-      }
-
-      // 何もパターンに当たらなかった場合は生テキストを表示
       if (htmlParts.length === 0) {
         contentEl.innerHTML = `<pre class="raw-text">${rawText}</pre>`;
       } else {
@@ -308,7 +312,8 @@
       .then(text => renderFromText(text))
       .catch(err => {
         document.getElementById("content").innerHTML =
-          `<div style="color:#c00;">読み込みエラー: ${err.message}</div>`;
+          `<div style="color:#c00; padding: 2rem; text-align: center;">読み込みエラー: ${err.message}<br>
+          <small>サーバー環境（http://...）で実行するか、ブラウザのCORS制限を回避する必要があります。</small></div>`;
       });
   </script>
 </body>
