@@ -185,17 +185,22 @@
     const text_file = "text_context_template.txt";
     document.getElementById("file-name").textContent = text_file;
 
+    // アンカー情報を保持する配列
     const vectorAnchors = [];
 
+    // ベクトル値を抽出する関数
     function parseVector(str) {
       const m = str.match(/<vector:\s*([0-9.]+)\s*>/i);
       return m ? parseFloat(m[1]) : null;
     }
 
-    function findSimilarAnchors(baseId, baseVector, limit = 5) {
-      if (baseVector == null) return [];
-      const others = vectorAnchors.filter(a => a.id !== baseId && a.vector != null);
-      others.sort((a, b) => Math.abs(a.vector - baseVector) - Math.abs(b.vector - a.vector));
+    // 類似アンカー（近いベクトル値）を探す関数
+    function findSimilarAnchors(baseId, baseVector, limit = 3) {
+      if (baseVector === null || isNaN(baseVector)) return [];
+      // 自分自身を除外し、ベクトル値を持っているものだけを対象にする
+      const others = vectorAnchors.filter(a => a.id !== baseId && a.vector !== null && !isNaN(a.vector));
+      // ベクトル値の差が小さい順にソート
+      others.sort((a, b) => Math.abs(a.vector - baseVector) - Math.abs(b.vector - baseVector));
       return others.slice(0, limit);
     }
 
@@ -206,17 +211,35 @@
       tocListEl.innerHTML = "";
       vectorAnchors.length = 0;
 
+      // 設計コメントを削除
       rawText = rawText.replace(/-start-[\s\S]*?-end-/g, "").trim();
 
       const lines = rawText.split(/\r?\n/);
+      
+      // まず全行をスキャンしてアンカー情報を収集する（関連質問の生成に必要）
+      lines.forEach((line, lineIndex) => {
+        const processed = line.trim();
+        // ^...^ 形式の抽出
+        const matches = line.matchAll(/\^+(.*?)\^+/g);
+        for (const match of matches) {
+          const inside = match[1];
+          const vector = parseVector(inside);
+          const displayText = inside.replace(/<vector:.*?>/g, "").trim();
+          const id = `vec-${vectorAnchors.length + 1}`;
+          vectorAnchors.push({ id, vector, displayText, indexInText: lineIndex });
+        }
+      });
+
       let htmlParts = [];
       let sectionCount = 0;
+      let currentAnchorIndex = 0;
 
+      // 収集したアンカー情報を使ってHTMLを組み立てる
       lines.forEach((line, lineIndex) => {
         let processed = line.trim();
         if (!processed) return;
 
-        // 1) タイトルの判定: ~タイトル~ または ~~タイトル~~
+        // 1) タイトルの判定: ~タイトル~
         if (/^~+[^~]+~+$/.test(processed)) {
           const title = processed.replace(/~+/g, "").trim();
           sectionCount++;
@@ -233,42 +256,30 @@
           return;
         }
 
-        // 2) アンカーの判定: ^...^ または ^^...^^
-        // 記号を消して、中のテキストだけを表示し、アンカーとして機能させる
+        // 2) アンカーの置換
         processed = line.replace(/\^+(.*?)\^+/g, (match, inside) => {
-          // vectorタグがあれば抽出
-          const vector = parseVector(inside);
-          const id = `vec-${vectorAnchors.length + 1}`;
-          
-          // 表示用テキスト（vectorタグ部分は除く）
-          const displayText = inside.replace(/<vector:.*?>/g, "").trim();
-          
-          vectorAnchors.push({
-            id,
-            vector,
-            raw: inside,
-            displayText,
-            indexInText: lineIndex
-          });
-          
-          return `<span class="anchor-text" id="${id}">${displayText}</span>`;
+          const anchor = vectorAnchors[currentAnchorIndex++];
+          if (anchor) {
+            return `<span class="anchor-text" id="${anchor.id}">${anchor.displayText}</span>`;
+          }
+          return "";
         });
 
         // 3) <appropriate-behavior> の処理
         if (processed.includes("<appropriate-behavior>")) {
+          // 直前のアンカーを特定
           const lastAnchor = [...vectorAnchors].reverse().find(a => a.indexInText <= lineIndex);
           const baseId = lastAnchor ? lastAnchor.id : null;
           const baseVector = lastAnchor ? lastAnchor.vector : null;
-          const similars = baseId ? findSimilarAnchors(baseId, baseVector, 5) : [];
+          const similars = findSimilarAnchors(baseId, baseVector, 3);
 
-          let block = `<div class="related-questions" data-base-anchor="${baseId || ""}">`;
+          let block = `<div class="related-questions">`;
           block += `<div class="related-questions-title">関連する質問</div>`;
           if (similars.length === 0) {
             block += `<div class="muted-meta">関連質問はまだありません。</div>`;
           } else {
             block += `<ul>`;
             similars.forEach(s => {
-              // 関連質問のリストには、そのアンカーの表示テキストを表示する
               const label = s.displayText || `質問ベクトル: ${s.vector}`;
               block += `<li data-target="${s.id}">${label}</li>`;
             });
@@ -278,7 +289,7 @@
           processed = processed.replace("<appropriate-behavior>", block);
         }
 
-        // 4) 不要なタグのクリーンアップ
+        // 4) クリーンアップ
         processed = processed.replace("<paragraph>", "").trim();
         processed = processed.replace(/<vector:.*?>/g, "");
 
@@ -293,6 +304,7 @@
         contentEl.innerHTML = htmlParts.join("\n");
       }
 
+      // イベントリスナーの登録
       contentEl.querySelectorAll(".related-questions li[data-target]").forEach(li => {
         li.addEventListener("click", () => {
           const targetId = li.getAttribute("data-target");
