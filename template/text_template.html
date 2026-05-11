@@ -1,1 +1,315 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>テキスト駆動HTMLビューア</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.7;
+      margin: 0;
+      padding: 0 1.5rem 3rem;
+      background: #fafafa;
+    }
 
+    header {
+      padding: 1rem 0 0.5rem;
+      border-bottom: 1px solid #ddd;
+      margin-bottom: 1rem;
+    }
+
+    #toc {
+      margin: 1rem 0 2rem;
+      padding: 1rem;
+      background: #fff;
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+    }
+
+    #toc h2 {
+      margin-top: 0;
+      font-size: 1rem;
+      color: #555;
+    }
+
+    #toc ul {
+      margin: 0.5rem 0 0;
+      padding-left: 1.2rem;
+    }
+
+    #toc li {
+      margin: 0.2rem 0;
+      font-size: 0.9rem;
+    }
+
+    #content {
+      background: #fff;
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+      padding: 1.5rem;
+    }
+
+    .section-heading {
+      font-weight: bold;
+      font-size: 1.2rem;
+      margin: 2rem 0 0.5rem;
+      position: relative;
+      padding-bottom: 0.3rem;
+    }
+
+    .section-heading::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, #1976d2, #42a5f5);
+      border-radius: 999px;
+    }
+
+    .paragraph-block {
+      margin: 1.5rem 0;
+    }
+
+    .paragraph-title {
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+    }
+
+    .related-questions {
+      margin: 1rem 0 1.5rem;
+      padding: 0.75rem 1rem;
+      background: #f5f7fb;
+      border-radius: 6px;
+      border-left: 4px solid #1976d2;
+      font-size: 0.9rem;
+    }
+
+    .related-questions-title {
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+      color: #333;
+    }
+
+    .related-questions ul {
+      margin: 0;
+      padding-left: 1.2rem;
+    }
+
+    .related-questions li {
+      margin: 0.2rem 0;
+      cursor: pointer;
+      color: #1976d2;
+      text-decoration: underline;
+    }
+
+    .vector-anchor {
+      font-weight: bold;
+      color: #1976d2;
+      cursor: pointer;
+      padding: 0 0.1rem;
+    }
+
+    .vector-anchor::after {
+      content: "^^";
+    }
+
+    .muted-meta {
+      color: #999;
+      font-size: 0.8rem;
+    }
+
+    pre.raw-text {
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: inherit;
+    }
+  </style>
+</head>
+<body>
+  <!-- Python風の前提定義：読み込むテキストファイル名だけを指定 -->
+  <script>
+    const text_file = "text_context_template.txt"; // 例: 同じディレクトリにあるpage.txtを読み込む
+  </script>
+
+  <header>
+    <h1>テキスト駆動ページ</h1>
+    <div class="muted-meta">
+      このページは <code>text_file = "<span id="file-name"></span>"</code> を前提として、
+      txtファイルの記号パターンからHTMLを自動生成します。
+    </div>
+  </header>
+
+  <section id="toc">
+    <h2>段落一覧（&lt;paragraph&gt; から自動生成）</h2>
+    <ul id="toc-list"></ul>
+  </section>
+
+  <main id="content">
+    読み込み中…
+  </main>
+
+  <script>
+    document.getElementById("file-name").textContent = text_file;
+
+    // ベクトル付きアンカー情報
+    const vectorAnchors = []; // { id, vector, raw, indexInText }
+
+    // 簡易的なベクトルパース（"0.12" のような数値を想定）
+    function parseVector(str) {
+      const m = str.match(/<vector:\s*([0-9.]+)\s*>/i);
+      return m ? parseFloat(m[1]) : null;
+    }
+
+    // 疑似的な「近い質問」判定（ここでは単純に数値差が近い順）
+    function findSimilarAnchors(baseId, baseVector, limit = 5) {
+      if (baseVector == null) return [];
+      const others = vectorAnchors.filter(a => a.id !== baseId && a.vector != null);
+      others.sort((a, b) => Math.abs(a.vector - baseVector) - Math.abs(b.vector - a.vector));
+      return others.slice(0, limit);
+    }
+
+    // テキストをHTMLに変換するメイン処理
+    function renderFromText(rawText) {
+      const contentEl = document.getElementById("content");
+      const tocListEl = document.getElementById("toc-list");
+      contentEl.innerHTML = "";
+      tocListEl.innerHTML = "";
+      vectorAnchors.length = 0;
+
+      // -start- と -end- の間は「設計の説明」として無視してもよいが、
+      // ここではそのまま本文に含めないように削除する
+      rawText = rawText.replace(/-start-[\s\S]*?-end-/g, "").trim();
+
+      // 行単位で処理しつつ、記号を差し替える
+      const lines = rawText.split(/\r?\n/);
+      let htmlParts = [];
+      let paragraphCount = 0;
+      let sectionCount = 0;
+      let currentParagraphId = null;
+
+      lines.forEach((line, lineIndex) => {
+        let processed = line;
+
+        // 1) ~~ に挟まれた文字を大きな段落見出しに
+        //    例: ~~セクションタイトル~~
+        processed = processed.replace(/~~([^~]+)~~/g, (match, title) => {
+          sectionCount++;
+          const id = `section-${sectionCount}`;
+          htmlParts.push(
+            `<div class="section-heading" id="${id}">${title}</div>`
+          );
+          return ""; // 行の中からは削除
+        });
+
+        // 2) <paragraph> があると段落ブロックを開始し、TOCに追加
+        if (processed.includes("<paragraph>")) {
+          const title = processed.replace("<paragraph>", "").trim() || `段落 ${paragraphCount + 1}`;
+          paragraphCount++;
+          const id = `paragraph-${paragraphCount}`;
+          currentParagraphId = id;
+
+          // TOCに追加
+          const li = document.createElement("li");
+          const a = document.createElement("a");
+          a.href = `#${id}`;
+          a.textContent = title;
+          li.appendChild(a);
+          tocListEl.appendChild(li);
+
+          // 本文側
+          htmlParts.push(
+            `<div class="paragraph-block" id="${id}">` +
+              `<div class="paragraph-title">${title}</div>`
+          );
+          processed = ""; // 行からはタイトル部分を削除
+        }
+
+        // 3) ^^<vector:○.○○>^^ をアンカーとして扱う
+        //    HTMLには ^^ の記号だけを表示し、ベクトルはdata属性に保持
+        processed = processed.replace(/\^\^([^^]+)\^\^/g, (match, inside) => {
+          const vector = parseVector(inside);
+          const id = `vec-${vectorAnchors.length + 1}`;
+          vectorAnchors.push({
+            id,
+            vector,
+            raw: inside,
+            indexInText: lineIndex
+          });
+          return `<span class="vector-anchor" id="${id}" data-vector="${vector ?? ""}"></span>`;
+        });
+
+        // 4) <appropriate-behavior> を「関連質問」ブロックに変換
+        if (processed.includes("<appropriate-behavior>")) {
+          // 直前の行に出てきた最後の vectorAnchor を対象とする
+          const lastAnchor = [...vectorAnchors].reverse().find(a => a.indexInText <= lineIndex);
+          const baseId = lastAnchor ? lastAnchor.id : null;
+          const baseVector = lastAnchor ? lastAnchor.vector : null;
+          const similars = baseId ? findSimilarAnchors(baseId, baseVector, 5) : [];
+
+          let block = `<div class="related-questions" data-base-anchor="${baseId || ""}">`;
+          block += `<div class="related-questions-title">関連する質問（ベクトルが近いもの）</div>`;
+          if (similars.length === 0) {
+            block += `<div class="muted-meta">関連質問はまだありません。</div>`;
+          } else {
+            block += `<ul>`;
+            similars.forEach(s => {
+              block += `<li data-target="${s.id}">質問ベクトル: ${s.vector}</li>`;
+            });
+            block += `</ul>`;
+          }
+          block += `</div>`;
+          processed = processed.replace("<appropriate-behavior>", block);
+        }
+
+        // 残ったテキストを段落として追加
+        if (processed.trim().length > 0) {
+          htmlParts.push(`<p>${processed}</p>`);
+        }
+
+        // 段落ブロックの終了（空行で閉じる簡易仕様）
+        if (processed.trim().length === 0 && currentParagraphId) {
+          htmlParts.push(`</div>`);
+          currentParagraphId = null;
+        }
+      });
+
+      // 残っている段落ブロックを閉じる
+      if (currentParagraphId) {
+        htmlParts.push(`</div>`);
+      }
+
+      // 何もパターンに当たらなかった場合は生テキストを表示
+      if (htmlParts.length === 0) {
+        contentEl.innerHTML = `<pre class="raw-text">${rawText}</pre>`;
+      } else {
+        contentEl.innerHTML = htmlParts.join("\n");
+      }
+
+      // 「関連質問」クリックで該当アンカーへスクロール
+      contentEl.querySelectorAll(".related-questions li[data-target]").forEach(li => {
+        li.addEventListener("click", () => {
+          const targetId = li.getAttribute("data-target");
+          const target = document.getElementById(targetId);
+          if (target) {
+            target.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        });
+      });
+    }
+
+    // txtファイルを読み込んでレンダリング
+    fetch(text_file)
+      .then(res => {
+        if (!res.ok) throw new Error("テキストファイルを読み込めませんでした");
+        return res.text();
+      })
+      .then(text => renderFromText(text))
+      .catch(err => {
+        document.getElementById("content").innerHTML =
+          `<div style="color:#c00;">読み込みエラー: ${err.message}</div>`;
+      });
+  </script>
+</body>
+</html>
