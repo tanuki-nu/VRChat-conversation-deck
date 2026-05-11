@@ -142,8 +142,9 @@
       color: #333388;
     }
 
-    .vector-anchor {
-      display: none;
+    .anchor-text {
+      font-weight: 500;
+      color: #333;
     }
 
     p {
@@ -205,7 +206,6 @@
       tocListEl.innerHTML = "";
       vectorAnchors.length = 0;
 
-      // -start- と -end- の間を削除
       rawText = rawText.replace(/-start-[\s\S]*?-end-/g, "").trim();
 
       const lines = rawText.split(/\r?\n/);
@@ -217,13 +217,11 @@
         if (!processed) return;
 
         // 1) タイトルの判定: ~タイトル~ または ~~タイトル~~
-        // 行全体が ~ または ~~ で囲まれている場合
         if (/^~+[^~]+~+$/.test(processed)) {
           const title = processed.replace(/~+/g, "").trim();
           sectionCount++;
           const id = `section-${sectionCount}`;
           
-          // TOCに追加
           const li = document.createElement("li");
           const a = document.createElement("a");
           a.href = `#${id}`;
@@ -231,28 +229,29 @@
           li.appendChild(a);
           tocListEl.appendChild(li);
 
-          // 本文側に見出しを追加
           htmlParts.push(`<div class="section-heading" id="${id}">${title}</div>`);
           return;
         }
 
         // 2) アンカーの判定: ^...^ または ^^...^^
-        // 制御記号を検出しつつ、表示用テキストからは削除する
+        // 記号を消して、中のテキストだけを表示し、アンカーとして機能させる
         processed = line.replace(/\^+(.*?)\^+/g, (match, inside) => {
-          // もし vector タグが含まれていれば、それをパースしてアンカーにする
-          if (inside.includes("<vector:")) {
-            const vector = parseVector(inside);
-            const id = `vec-${vectorAnchors.length + 1}`;
-            vectorAnchors.push({
-              id,
-              vector,
-              raw: inside,
-              indexInText: lineIndex
-            });
-            return `<span class="vector-anchor" id="${id}" data-vector="${vector ?? ""}"></span>`;
-          }
-          // vector タグがない場合は、単に記号を消す（表示しない）
-          return "";
+          // vectorタグがあれば抽出
+          const vector = parseVector(inside);
+          const id = `vec-${vectorAnchors.length + 1}`;
+          
+          // 表示用テキスト（vectorタグ部分は除く）
+          const displayText = inside.replace(/<vector:.*?>/g, "").trim();
+          
+          vectorAnchors.push({
+            id,
+            vector,
+            raw: inside,
+            displayText,
+            indexInText: lineIndex
+          });
+          
+          return `<span class="anchor-text" id="${id}">${displayText}</span>`;
         });
 
         // 3) <appropriate-behavior> の処理
@@ -269,7 +268,9 @@
           } else {
             block += `<ul>`;
             similars.forEach(s => {
-              block += `<li data-target="${s.id}">質問ベクトル: ${s.vector}</li>`;
+              // 関連質問のリストには、そのアンカーの表示テキストを表示する
+              const label = s.displayText || `質問ベクトル: ${s.vector}`;
+              block += `<li data-target="${s.id}">${label}</li>`;
             });
             block += `</ul>`;
           }
@@ -279,10 +280,8 @@
 
         // 4) 不要なタグのクリーンアップ
         processed = processed.replace("<paragraph>", "").trim();
-        // まだ残っている <vector:...> タグを削除
         processed = processed.replace(/<vector:.*?>/g, "");
 
-        // 残ったテキストを段落として追加
         if (processed.length > 0) {
           htmlParts.push(`<p>${processed}</p>`);
         }
@@ -294,7 +293,6 @@
         contentEl.innerHTML = htmlParts.join("\n");
       }
 
-      // 関連質問のクリックイベント
       contentEl.querySelectorAll(".related-questions li[data-target]").forEach(li => {
         li.addEventListener("click", () => {
           const targetId = li.getAttribute("data-target");
