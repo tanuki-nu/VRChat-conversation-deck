@@ -185,31 +185,61 @@
     const text_file = "text_context_template.txt";
     document.getElementById("file-name").textContent = text_file;
 
+    /**
+     * 会話デッキ用の16次元意味軸定義:
+     * 1. 質問性（0=質問しない, 1=強い質問）
+     * 2. 自己開示度（0=開示なし, 1=深い開示）
+     * 3. 相手関心度（0=自分中心, 1=相手中心）
+     * 4. 話題シフト度（0=深堀, 1=新しい話題へ）
+     * 5. 抽象度（0=具体, 1=抽象）
+     * 6. 具体度（0=抽象, 1=具体）
+     * 7. 深堀度（0=浅い, 1=深い）
+     * 8. 時間軸（0=過去, 1=未来）
+     * 9. ポジティブ度
+     * 10. ネガティブ度
+     * 11. 親密度（0=初対面, 1=親しい）
+     * 12. 礼儀度（0=カジュアル, 1=丁寧）
+     * 13. 情報要求度（0=要求なし, 1=強い要求）
+     * 14. 行動促進度（0=促さない, 1=促す）
+     * 15. 会話継続性（0=終わりに向かう, 1=続ける）
+     * 16. 新規性（0=既存話題, 1=新しい話題）
+     */
+
+    // 1. アンカー情報を保持する配列
     const vectorAnchors = [];
 
-    // ベクトル値をパース
+    // 2. ベクトルパース関数
     function parseVector(str) {
       if (!str) return null;
       const m = str.match(/<vector:\s*([^>]+)\s*>/i);
       if (!m) return null;
-      const parts = m[1].split(',').map(s => parseFloat(s.trim()));
+      
+      let parts = m[1].split(',').map(s => parseFloat(s.trim()));
+      
+      // 16次元に満たない場合は 0 を追加して 16次元に揃える
+      while (parts.length < 16) {
+        parts.push(0.0);
+      }
+      // 16次元を超える場合は切り捨てる
+      if (parts.length > 16) {
+        parts = parts.slice(0, 16);
+      }
+      
       return parts.every(n => !isNaN(n)) ? parts : null;
     }
 
-    // ユークリッド距離を計算
+    // 3. 距離計算（ユークリッド距離）
     function calculateDistance(v1, v2) {
       if (!v1 || !v2) return Infinity;
-      const len = Math.max(v1.length, v2.length);
       let sum = 0;
-      for (let i = 0; i < len; i++) {
-        const a = v1[i] || 0;
-        const b = v2[i] || 0;
-        sum += Math.pow(a - b, 2);
+      for (let i = 0; i < 16; i++) {
+        sum += Math.pow(v1[i] - v2[i], 2);
       }
       return Math.sqrt(sum);
     }
 
-    function findSimilarAnchors(baseId, baseVector, limit = 3) {
+    // 4. 類似アンカー検索
+    function findSimilarAnchors(baseId, baseVector, limit) {
       if (!baseVector) return [];
       const others = vectorAnchors.filter(a => a.id !== baseId && a.vector !== null);
       others.sort((a, b) => calculateDistance(a.vector, baseVector) - calculateDistance(b.vector, baseVector));
@@ -226,27 +256,21 @@
       rawText = rawText.replace(/-start-[\s\S]*?-end-/g, "").trim();
       const lines = rawText.split(/\r?\n/);
       
-      // 1次スキャン：行ごとのアンカー情報収集
+      // 1次スキャン：アンカーとベクトルの抽出
       lines.forEach((line, lineIndex) => {
-        const trimmed = line.trim();
-        if (!trimmed) return;
-
-        // 行内の ^...^ を全て抽出
         const anchorMatches = Array.from(line.matchAll(/\^+(.*?)\^+/g));
-        // 行内の <vector:...> を全て抽出
         const vectorMatches = Array.from(line.matchAll(/<vector:\s*([^>]+)\s*>/gi));
 
         anchorMatches.forEach((match, i) => {
           const displayText = match[1].trim();
           const id = `vec-${vectorAnchors.length + 1}`;
-          // 同じインデックスのベクトルタグがあれば紐付ける
           const vectorStr = vectorMatches[i] ? vectorMatches[i][0] : null;
           const vector = parseVector(vectorStr);
           
           vectorAnchors.push({ 
-            id, 
-            vector, 
-            displayText, 
+            id: id,
+            displayText: displayText,
+            vector: vector,
             indexInText: lineIndex,
             rawMatch: match[0]
           });
@@ -255,14 +279,12 @@
 
       let htmlParts = [];
       let sectionCount = 0;
-      let anchorPointer = 0;
 
-      // 2次スキャン：HTML組み立て
+      // 2次スキャン：HTML 組み立て
       lines.forEach((line, lineIndex) => {
         let processed = line.trim();
         if (!processed) return;
 
-        // セクションタイトル
         if (/^~+[^~]+~+$/.test(processed)) {
           const title = processed.replace(/~+/g, "").trim();
           sectionCount++;
@@ -277,13 +299,11 @@
           return;
         }
 
-        // アンカーテキスト置換
         processed = line.replace(/\^+(.*?)\^+/g, (match) => {
           const anchor = vectorAnchors.find(a => a.indexInText === lineIndex && a.rawMatch === match);
           return anchor ? `<span class="anchor-text" id="${anchor.id}">${anchor.displayText}</span>` : match;
         });
 
-        // 関連質問
         if (processed.includes("<appropriate-behavior>")) {
           const lastAnchor = [...vectorAnchors].reverse().find(a => a.indexInText <= lineIndex);
           const baseId = lastAnchor ? lastAnchor.id : null;
@@ -305,7 +325,6 @@
           processed = processed.replace("<appropriate-behavior>", block);
         }
 
-        // クリーンアップ
         processed = processed.replace("<paragraph>", "").trim();
         processed = processed.replace(/<vector:.*?>/g, "");
 
