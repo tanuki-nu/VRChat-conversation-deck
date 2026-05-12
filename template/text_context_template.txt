@@ -1,16 +1,16 @@
 <paragraph>
 ~べくとる1たち~
-^test1.00^<vector:1.00>
+^test1.00,0.00^<vector:1.00,0.00>
 <appropriate-behavior>
-^test0.98^<vector:0.98>
+^test0.98,0.00^<vector:0.98,0.00>
 <appropriate-behavior>
-^test0.96^<vector:0.96>
+^test0.96,0.00^<vector:0.96,0.00>
 <appropriate-behavior>
 
 ~べくとる0.5たち~
-^test0.5^<vector:0.50>
+^test0.5,0.00^<vector:0.50,0.00>
 <appropriate-behavior>
-^test0.48^<vector:0.48>
+^test0.48,0.00^<vector:0.48,0.00>
 <appropriate-behavior>
-^test0.46^<vector:0.46>
+^test0.46,0.00^<vector:0.46,0.00>
 <appropriate-behavior>
