@@ -1,1 +1,355 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>会話デッキ - made by tanuinu</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.7;
+      margin: 0;
+      padding: 2rem;
+      background-image: url('https://drive.google.com/thumbnail?id=1lib1hz_wcIWRTFGsT61Ipkj9xR-beQ4s&sz=w1920');
+      background-size: cover;
+      background-attachment: fixed;
+      background-position: center;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+    }
 
+    .main-container {
+      background: rgba(255, 255, 255, 0.4);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 24px;
+      padding: 3rem;
+      max-width: 1000px;
+      width: 100%;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+      border: none;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    header h1 {
+      margin: 0 0 0.75rem;
+      font-size: 2.2rem;
+      color: #222;
+    }
+
+    .muted-meta {
+      color: #555;
+      font-size: 0.95rem;
+    }
+
+    #toc {
+      margin-bottom: 3rem;
+      padding: 1.5rem 2rem;
+      background: rgba(255, 255, 255, 0.25);
+      border-radius: 16px;
+    }
+
+    #toc h2 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      color: #333;
+      border-bottom: 2px solid #CCCCFF;
+      display: inline-block;
+      padding-bottom: 0.2rem;
+      margin-bottom: 1rem;
+    }
+
+    #toc ul {
+      margin: 0;
+      padding-left: 1.5rem;
+      list-style-type: circle;
+    }
+
+    #toc li {
+      margin: 0.4rem 0;
+    }
+
+    #toc a {
+      color: #3366CC;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    #toc a:hover {
+      text-decoration: underline;
+    }
+
+    #content {
+      color: #222;
+      font-size: 1.05rem;
+    }
+
+    .section-heading {
+      font-weight: bold;
+      font-size: 1.6rem;
+      margin: 3.5rem 0 1.5rem;
+      position: relative;
+      padding-bottom: 0.6rem;
+      color: #111;
+    }
+
+    .section-heading::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 80px;
+      height: 5px;
+      background: #CCCCFF;
+      border-radius: 99px;
+    }
+
+    .related-questions {
+      margin: 2rem 0;
+      padding: 1.2rem 1.5rem;
+      background: rgba(204, 204, 255, 0.2);
+      border-radius: 12px;
+      border-left: 6px solid #CCCCFF;
+    }
+
+    .related-questions-title {
+      font-weight: bold;
+      margin-bottom: 0.6rem;
+      color: #444;
+      font-size: 1rem;
+    }
+
+    .related-questions ul {
+      margin: 0;
+      padding-left: 1.5rem;
+    }
+
+    .related-questions li {
+      margin: 0.4rem 0;
+      cursor: pointer;
+      color: #5555AA;
+      text-decoration: underline;
+      transition: color 0.2s;
+    }
+
+    .related-questions li:hover {
+      color: #333388;
+    }
+
+    .anchor-text {
+      font-weight: 500;
+      color: #333;
+    }
+
+    p {
+      margin: 1.2rem 0;
+    }
+
+    pre.raw-text {
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: inherit;
+      background: rgba(255, 255, 255, 0.2);
+      padding: 1rem;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="main-container">
+    <header>
+      <h1>会話デッキ - Made by Tanuki-nu</h1>
+      <div class="muted-meta">
+        このページでは会話に悩んだ際に簡単に会話ができるようにセットを組んでいます。
+        会話セットはGemini+たぬきーぬによる編集を行った150セットほどの質問セットを搭載しております。
+        次の質問を提案する機能はついてはいますがジャンルが固定されてしまうため、手動で探す必要はあります。
+      </div>
+    </header>
+
+    <section id="toc">
+      <h2>目次</h2>
+      <ul id="toc-list"></ul>
+    </section>
+
+    <main id="content">
+      読み込み中…
+    </main>
+  </div>
+
+  <script>
+    const text_file = "text_context_1.0.txt";
+    document.getElementById("file-name").textContent = text_file;
+
+    /**
+     * 会話デッキ用の16次元意味軸定義:
+     * 1. 質問性（0=質問しない, 1=強い質問）
+     * 2. 自己開示度（0=開示なし, 1=深い開示）
+     * 3. 相手関心度（0=自分中心, 1=相手中心）
+     * 4. 話題シフト度（0=深堀, 1=新しい話題へ）
+     * 5. 抽象度（0=具体, 1=抽象）
+     * 6. 具体度（0=抽象, 1=具体）
+     * 7. 深堀度（0=浅い, 1=深い）
+     * 8. 時間軸（0=過去, 1=未来）
+     * 9. ポジティブ度
+     * 10. ネガティブ度
+     * 11. 親密度（0=初対面, 1=親しい）
+     * 12. 礼儀度（0=カジュアル, 1=丁寧）
+     * 13. 情報要求度（0=要求なし, 1=強い要求）
+     * 14. 行動促進度（0=促さない, 1=促す）
+     * 15. 会話継続性（0=終わりに向かう, 1=続ける）
+     * 16. 新規性（0=既存話題, 1=新しい話題）
+     */
+
+    // 1. アンカー情報を保持する配列
+    const vectorAnchors = [];
+
+    // 2. ベクトルパース関数
+    function parseVector(str) {
+      if (!str) return null;
+      const m = str.match(/<vector:\s*([^>]+)\s*>/i);
+      if (!m) return null;
+      
+      let parts = m[1].split(',').map(s => parseFloat(s.trim()));
+      
+      // 16次元に満たない場合は 0 を追加して 16次元に揃える
+      while (parts.length < 16) {
+        parts.push(0.0);
+      }
+      // 16次元を超える場合は切り捨てる
+      if (parts.length > 16) {
+        parts = parts.slice(0, 16);
+      }
+      
+      return parts.every(n => !isNaN(n)) ? parts : null;
+    }
+
+    // 3. 距離計算（ユークリッド距離）
+    function calculateDistance(v1, v2) {
+      if (!v1 || !v2) return Infinity;
+      let sum = 0;
+      for (let i = 0; i < 16; i++) {
+        sum += Math.pow(v1[i] - v2[i], 2);
+      }
+      return Math.sqrt(sum);
+    }
+
+    // 4. 類似アンカー検索
+    function findSimilarAnchors(baseId, baseVector, limit) {
+      if (!baseVector) return [];
+      const others = vectorAnchors.filter(a => a.id !== baseId && a.vector !== null);
+      others.sort((a, b) => calculateDistance(a.vector, baseVector) - calculateDistance(b.vector, baseVector));
+      return others.slice(0, limit);
+    }
+
+    function renderFromText(rawText) {
+      const contentEl = document.getElementById("content");
+      const tocListEl = document.getElementById("toc-list");
+      contentEl.innerHTML = "";
+      tocListEl.innerHTML = "";
+      vectorAnchors.length = 0;
+
+      rawText = rawText.replace(/-start-[\s\S]*?-end-/g, "").trim();
+      const lines = rawText.split(/\r?\n/);
+      
+      // 1次スキャン：アンカーとベクトルの抽出
+      lines.forEach((line, lineIndex) => {
+        const anchorMatches = Array.from(line.matchAll(/\^+(.*?)\^+/g));
+        const vectorMatches = Array.from(line.matchAll(/<vector:\s*([^>]+)\s*>/gi));
+
+        anchorMatches.forEach((match, i) => {
+          const displayText = match[1].trim();
+          const id = `vec-${vectorAnchors.length + 1}`;
+          const vectorStr = vectorMatches[i] ? vectorMatches[i][0] : null;
+          const vector = parseVector(vectorStr);
+          
+          vectorAnchors.push({ 
+            id: id,
+            displayText: displayText,
+            vector: vector,
+            indexInText: lineIndex,
+            rawMatch: match[0]
+          });
+        });
+      });
+
+      let htmlParts = [];
+      let sectionCount = 0;
+
+      // 2次スキャン：HTML 組み立て
+      lines.forEach((line, lineIndex) => {
+        let processed = line.trim();
+        if (!processed) return;
+
+        if (/^~+[^~]+~+$/.test(processed)) {
+          const title = processed.replace(/~+/g, "").trim();
+          sectionCount++;
+          const id = `section-${sectionCount}`;
+          const li = document.createElement("li");
+          const a = document.createElement("a");
+          a.href = `#${id}`;
+          a.textContent = title;
+          li.appendChild(a);
+          tocListEl.appendChild(li);
+          htmlParts.push(`<div class="section-heading" id="${id}">${title}</div>`);
+          return;
+        }
+
+        processed = line.replace(/\^+(.*?)\^+/g, (match) => {
+          const anchor = vectorAnchors.find(a => a.indexInText === lineIndex && a.rawMatch === match);
+          return anchor ? `<span class="anchor-text" id="${anchor.id}">${anchor.displayText}</span>` : match;
+        });
+
+        if (processed.includes("<appropriate-behavior>")) {
+          const lastAnchor = [...vectorAnchors].reverse().find(a => a.indexInText <= lineIndex);
+          const baseId = lastAnchor ? lastAnchor.id : null;
+          const baseVector = lastAnchor ? lastAnchor.vector : null;
+          const similars = findSimilarAnchors(baseId, baseVector, 3);
+
+          let block = `<div class="related-questions">`;
+          block += `<div class="related-questions-title">関連する質問</div>`;
+          if (similars.length === 0) {
+            block += `<div class="muted-meta">関連質問はまだありません。</div>`;
+          } else {
+            block += `<ul>`;
+            similars.forEach(s => {
+              block += `<li data-target="${s.id}">${s.displayText}</li>`;
+            });
+            block += `</ul>`;
+          }
+          block += `</div>`;
+          processed = processed.replace("<appropriate-behavior>", block);
+        }
+
+        processed = processed.replace("<paragraph>", "").trim();
+        processed = processed.replace(/<vector:.*?>/g, "");
+
+        if (processed.length > 0) {
+          htmlParts.push(`<p>${processed}</p>`);
+        }
+      });
+
+      contentEl.innerHTML = htmlParts.length === 0 ? `<pre class="raw-text">${rawText}</pre>` : htmlParts.join("\n");
+
+      contentEl.querySelectorAll(".related-questions li[data-target]").forEach(li => {
+        li.addEventListener("click", () => {
+          const target = document.getElementById(li.getAttribute("data-target"));
+          if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+      });
+    }
+
+    fetch(text_file)
+      .then(res => res.ok ? res.text() : Promise.reject("読み込み失敗"))
+      .then(text => renderFromText(text))
+      .catch(err => {
+        document.getElementById("content").innerHTML = `<div style="color:#c00; padding: 2rem; text-align: center;">読み込みエラー: ${err}</div>`;
+      });
+  </script>
+</body>
+</html>
