@@ -185,22 +185,34 @@
     const text_file = "text_context_template.txt";
     document.getElementById("file-name").textContent = text_file;
 
-    // アンカー情報を保持する配列
     const vectorAnchors = [];
 
-    // ベクトル値を抽出する関数
+    // ベクトル値をパース（1次元または2次元に対応）
     function parseVector(str) {
-      const m = str.match(/<vector:\s*([0-9.]+)\s*>/i);
-      return m ? parseFloat(m[1]) : null;
+      const m = str.match(/<vector:\s*([^>]+)\s*>/i);
+      if (!m) return null;
+      const parts = m[1].split(',').map(s => parseFloat(s.trim()));
+      return parts.every(n => !isNaN(n)) ? parts : null;
     }
 
-    // 類似アンカー（近いベクトル値）を探す関数
+    // ユークリッド距離を計算
+    function calculateDistance(v1, v2) {
+      if (!v1 || !v2) return Infinity;
+      // 次数を合わせる（短い方に合わせるか、足りない分を0埋めするか）
+      const len = Math.max(v1.length, v2.length);
+      let sum = 0;
+      for (let i = 0; i < len; i++) {
+        const a = v1[i] || 0;
+        const b = v2[i] || 0;
+        sum += Math.pow(a - b, 2);
+      }
+      return Math.sqrt(sum);
+    }
+
     function findSimilarAnchors(baseId, baseVector, limit = 3) {
-      if (baseVector === null || isNaN(baseVector)) return [];
-      // 自分自身を除外し、ベクトル値を持っているものだけを対象にする
-      const others = vectorAnchors.filter(a => a.id !== baseId && a.vector !== null && !isNaN(a.vector));
-      // ベクトル値の差が小さい順にソート
-      others.sort((a, b) => Math.abs(a.vector - baseVector) - Math.abs(b.vector - baseVector));
+      if (!baseVector) return [];
+      const others = vectorAnchors.filter(a => a.id !== baseId && a.vector !== null);
+      others.sort((a, b) => calculateDistance(a.vector, baseVector) - calculateDistance(b.vector, baseVector));
       return others.slice(0, limit);
     }
 
@@ -211,15 +223,11 @@
       tocListEl.innerHTML = "";
       vectorAnchors.length = 0;
 
-      // 設計コメントを削除
       rawText = rawText.replace(/-start-[\s\S]*?-end-/g, "").trim();
-
       const lines = rawText.split(/\r?\n/);
       
-      // まず全行をスキャンしてアンカー情報を収集する（関連質問の生成に必要）
+      // 1次スキャン：アンカー情報収集
       lines.forEach((line, lineIndex) => {
-        const processed = line.trim();
-        // ^...^ 形式の抽出
         const matches = line.matchAll(/\^+(.*?)\^+/g);
         for (const match of matches) {
           const inside = match[1];
@@ -234,40 +242,31 @@
       let sectionCount = 0;
       let currentAnchorIndex = 0;
 
-      // 収集したアンカー情報を使ってHTMLを組み立てる
+      // 2次スキャン：HTML組み立て
       lines.forEach((line, lineIndex) => {
         let processed = line.trim();
         if (!processed) return;
 
-        // 1) タイトルの判定: ~タイトル~
         if (/^~+[^~]+~+$/.test(processed)) {
           const title = processed.replace(/~+/g, "").trim();
           sectionCount++;
           const id = `section-${sectionCount}`;
-          
           const li = document.createElement("li");
           const a = document.createElement("a");
           a.href = `#${id}`;
           a.textContent = title;
           li.appendChild(a);
           tocListEl.appendChild(li);
-
           htmlParts.push(`<div class="section-heading" id="${id}">${title}</div>`);
           return;
         }
 
-        // 2) アンカーの置換
         processed = line.replace(/\^+(.*?)\^+/g, (match, inside) => {
           const anchor = vectorAnchors[currentAnchorIndex++];
-          if (anchor) {
-            return `<span class="anchor-text" id="${anchor.id}">${anchor.displayText}</span>`;
-          }
-          return "";
+          return anchor ? `<span class="anchor-text" id="${anchor.id}">${anchor.displayText}</span>` : "";
         });
 
-        // 3) <appropriate-behavior> の処理
         if (processed.includes("<appropriate-behavior>")) {
-          // 直前のアンカーを特定
           const lastAnchor = [...vectorAnchors].reverse().find(a => a.indexInText <= lineIndex);
           const baseId = lastAnchor ? lastAnchor.id : null;
           const baseVector = lastAnchor ? lastAnchor.vector : null;
@@ -280,7 +279,7 @@
           } else {
             block += `<ul>`;
             similars.forEach(s => {
-              const label = s.displayText || `質問ベクトル: ${s.vector}`;
+              const label = s.displayText || `ベクトル: [${s.vector.join(', ')}]`;
               block += `<li data-target="${s.id}">${label}</li>`;
             });
             block += `</ul>`;
@@ -289,7 +288,6 @@
           processed = processed.replace("<appropriate-behavior>", block);
         }
 
-        // 4) クリーンアップ
         processed = processed.replace("<paragraph>", "").trim();
         processed = processed.replace(/<vector:.*?>/g, "");
 
@@ -298,34 +296,21 @@
         }
       });
 
-      if (htmlParts.length === 0) {
-        contentEl.innerHTML = `<pre class="raw-text">${rawText}</pre>`;
-      } else {
-        contentEl.innerHTML = htmlParts.join("\n");
-      }
+      contentEl.innerHTML = htmlParts.length === 0 ? `<pre class="raw-text">${rawText}</pre>` : htmlParts.join("\n");
 
-      // イベントリスナーの登録
       contentEl.querySelectorAll(".related-questions li[data-target]").forEach(li => {
         li.addEventListener("click", () => {
-          const targetId = li.getAttribute("data-target");
-          const target = document.getElementById(targetId);
-          if (target) {
-            target.scrollIntoView({ behavior: "smooth", block: "center" });
-          }
+          const target = document.getElementById(li.getAttribute("data-target"));
+          if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
         });
       });
     }
 
     fetch(text_file)
-      .then(res => {
-        if (!res.ok) throw new Error("テキストファイルを読み込めませんでした");
-        return res.text();
-      })
+      .then(res => res.ok ? res.text() : Promise.reject("読み込み失敗"))
       .then(text => renderFromText(text))
       .catch(err => {
-        document.getElementById("content").innerHTML =
-          `<div style="color:#c00; padding: 2rem; text-align: center;">読み込みエラー: ${err.message}<br>
-          <small>サーバー環境（http://...）で実行するか、ブラウザのCORS制限を回避する必要があります。</small></div>`;
+        document.getElementById("content").innerHTML = `<div style="color:#c00; padding: 2rem; text-align: center;">読み込みエラー: ${err}</div>`;
       });
   </script>
 </body>
