@@ -183,9 +183,14 @@
   </div>
 
   <script>
-    const text_file = "text_context_rev1.txt";
-    document.getElementById("file-name").textContent = text_file;
-
+    document.addEventListener("DOMContentLoaded", () => {
+    const text_file = "pages/text_context_rev1.txt";
+    const fileNameEl = document.getElementById("file-name");
+    
+    if (fileNameEl) {
+        fileNameEl.textContent = text_file;
+    }
+      
     /**
      * 会話デッキ用の16次元意味軸定義:
      * 1. 質問性（0=質問しない, 1=強い質問）
